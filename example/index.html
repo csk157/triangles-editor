@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Example</title>
+	
+</head>
+<body>
+	<canvas id="c" width="800" height="500"></canvas>
+	<script type="text/javascript" src="../dist/bundle.js"></script>
+	<script type="text/javascript">
+		var canvas = document.getElementById('c');
+		var editor = new Editor(canvas, {unitSize: 20});
+
+		var isMouseDown = false;
+		c.onmousedown = function (e) {
+			isMouseDown = true;
+			var x = e.pageX - this.offsetLeft;
+			var y = e.pageY - this.offsetTop;
+
+			editor.fillTriangleAt({x: x, y: y}, '#000000');
+		};
+
+		c.onmousemove = function (e) {
+			if (!isMouseDown)
+				return;
+
+			var x = e.pageX - this.offsetLeft;
+			var y = e.pageY - this.offsetTop;
+			editor.fillTriangleAt({x: x, y: y}, '#000000');
+		}
+
+		c.onmouseup = function (e) {
+			isMouseDown = false;
+		}
+
+	</script>
+</body>
+</html>
