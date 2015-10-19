@@ -6,7 +6,6 @@
   "author": "Ceslovas Lopan",
   "license": "MIT",
   "main": "lib/index.js",
-  "browser": "dist/bundle.js",
   "dependencies": {
     "contextify": "github:rvagg/contextify#nan2",
     "jsdom": "^6.5.1",

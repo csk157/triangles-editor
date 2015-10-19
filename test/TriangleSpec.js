@@ -54,4 +54,13 @@ describe('Triangle', () => {
 
     expect(triangle.shape).to.be.null;
   });
+
+  it('Determines if triangle is contained in rectangle', () => {
+    const triangle = new Triangle({x: 0, y: 0}, {x: 5, y: 5}, {x: 10, y: 0});
+    const inRect = {x: -1, y: -1, width: 15, height: 15};
+    const outRect = {x: 5, y: 3, width: 15, height: 15};
+
+    expect(triangle.isContainedIn(inRect)).to.be.true;
+    expect(triangle.isContainedIn(outRect)).to.be.false;
+  });
 });

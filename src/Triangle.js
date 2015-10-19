@@ -1,3 +1,4 @@
+import _ from 'underscore';
 import { Point, Path } from 'paper';
 class Triangle {
   constructor(p1, p2, p3) {
@@ -43,6 +44,11 @@ class Triangle {
       ],
       fillColor: color,
     });
+  }
+  isContainedIn(rect) {
+    return _.reduce(this.points, (memo, p) => {
+      return memo && !(p.x < rect.x || p.y < rect.y || p.x > rect.x + rect.width || p.y > rect.y + rect.height)
+    }, true);
   }
 }
 

@@ -5,13 +5,19 @@ import Triangle from './Triangle';
 
 class Editor {
   constructor(elem, {unitSize}) {
-    this.grid = new Grid({
-      width: Math.floor(elem.width / unitSize),
-      height: Math.floor(elem.height / unitSize)}, unitSize);
-    this.canvas = Paper.setup(elem);
+    this.width = Math.floor(elem.width / unitSize);
+    this.height = Math.floor(elem.height / unitSize);
     this.gridLines = [];
+    this.background = null;
+
+    this.grid = new Grid({
+      width: this.width,
+      height: this.height,
+    }, unitSize);
+    this.canvas = Paper.setup(elem);
     this.drawGridLines();
     this.createTriangles();
+    this.createBackground();
 
     Paper.view.draw();
   }
@@ -26,6 +32,15 @@ class Editor {
       });
 
       this.gridLines.push(line);
+    });
+  }
+
+  createBackground() {
+    this.background = new Paper.Path.Rectangle({
+      point: new Paper.Point(0, 0),
+      size: new Paper.Size(this.width * this.unitSize, this.height * this.width * this.unitSize),
+      fillColor: '#FF0000',
+      visible: false,
     });
   }
 
@@ -77,7 +92,62 @@ class Editor {
       triangle.erase();
     }
   }
+  setBackgroundColor(color) {
+    if (color === 'transparent') {
+      this.background.visible = false;
+    } else {
+      this.background.fillColor = color;
+      this.background.visible = true;
+    }
+  }
+  getAllTriangles() {
+    const triangles = [];
+    this.grid.iterateCells((pos) => {
+      const vals = _.values(this.grid.getGridValue(pos, triangles));
+      triangles.push(vals);
+    });
 
+    return _.flatten(triangles);
+  }
+  getAllFilledTriangles() {
+    return _.filter(this.getAllTriangles(), (t) => t.shape !== null);
+  }
+  getAllTrianglesInRectangle(rect) {
+    const triangles = [];
+    const leftTop = {x: rect.x, y: rect.y};
+    const rightBottom = {x: rect.x + rect.width, y: rect.y + rect.height};
+
+    let leftTopGridPos = this.grid.getGridPosition(leftTop);
+    let rightBottomGridPos = this.grid.getGridPosition(rightBottom);
+
+    if (!leftTopGridPos) {
+      leftTopGridPos = {x: 0, y: 0};
+    }
+
+    if (!rightBottomGridPos) {
+      rightBottomGridPos = {x: this.grid.width - 1, y: this.grid.height - 1};
+    }
+
+    for (let i = leftTopGridPos.x; i <= rightBottom.x; i++) {
+      for (let j = leftTopGridPos.y; j <= rightBottom.y; j++) {
+        triangles.push(_.values(this.grid.getGridValue({x: i, y: j})));
+      }
+    }
+
+    return _.filter(_.flatten(triangles), (t) => t.isContainedIn(rect));
+  }
+  eraseAllTriangles() {
+    const triangles = this.getAllFilledTriangles();
+    _.each(triangles, (t) => t.erase());
+  }
+  fillInRectangle(rect, color) {
+    const triangles = this.getAllTrianglesInRectangle(rect);
+    _.each(triangles, (t) => t.fill(color));
+  }
+  eraseInRectangle(rect) {
+    const triangles = this.getAllTrianglesInRectangle(rect);
+    _.each(triangles, (t) => t.erase());
+  }
 }
 
 export default Editor;

@@ -88,4 +88,56 @@ describe('Editor', () => {
     const filledTriangle = editor.grid.getGridValue({x: 1, y: 0}).top;
     expect(filledTriangle.shape).to.be.null;
   });
+
+  it('Erases all the triangles', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
+    editor.fillTriangleAt({x: 7.5, y: 10.1}, '#FF0000');
+    editor.eraseAllTriangles();
+
+    expect(editor.getTriangleAt({x: 7.5, y: 0.1}).shape).to.be.null;
+    expect(editor.getTriangleAt({x: 7.5, y: 11.1}).shape).to.be.null;
+  });
+
+  it('Sets background', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.setBackgroundColor('#FF0000');
+    expect(editor.background.fillColor.toCSS(true).toLowerCase()).to.be.equal('#ff0000');
+  });
+
+  it('Sets transparent background', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.setBackgroundColor('transparent');
+    expect(editor.background.visible).to.be.false;
+
+    editor.setBackgroundColor('#FF0000');
+    expect(editor.background.visible).to.be.true;
+  });
+
+  it('Fills triangles contained in the rectangle', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillInRectangle({x: -1, y: -1, width: 12, height: 12}, '#FF0000');
+    expect(editor.getTriangleAt({x: 0.1, y: 2}).shape.fillColor.toCSS(true).toLowerCase()).to.be.equal('#ff0000');
+    expect(editor.getTriangleAt({x: 10.1, y: 8.3}).shape).to.be.null;
+  });
+
+  it('Erases triangles contained in the rectangle', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillInRectangle({x: -1, y: -1, width: 12, height: 12}, '#FF0000');
+    expect(editor.getTriangleAt({x: 0.1, y: 2}).shape.fillColor.toCSS(true).toLowerCase()).to.be.equal('#ff0000');
+    expect(editor.getTriangleAt({x: 10.1, y: 8.3}).shape).to.be.null;
+
+    editor.eraseInRectangle({x: -1, y: -1, width: 12, height: 12});
+    expect(editor.getTriangleAt({x: 0.1, y: 2}).shape).to.be.null;
+  });
 });
