@@ -2,6 +2,8 @@ import _ from 'underscore';
 import Paper from 'paper';
 import Grid from './Grid';
 import Triangle from './Triangle';
+import History from './History';
+import { FillTriangle, ChangeBackgroundColor } from './history_actions';
 
 class Editor {
   constructor(elem, {unitSize}) {
@@ -14,6 +16,7 @@ class Editor {
       width: this.width,
       height: this.height,
     }, unitSize);
+    this.history = new History();
     this.canvas = Paper.setup(elem);
     this.drawGridLines();
     this.createTriangles();
@@ -83,19 +86,43 @@ class Editor {
   fillTriangleAt(pos, color) {
     const triangle = this.getTriangleAt(pos);
     if (triangle) {
+      const prevColor = triangle.shape ? triangle.shape.fillColor.toCSS(true) : null;
+      if (prevColor !== color) {
+        this.history.addAction(new FillTriangle(triangle, prevColor, color));
+      }
+
       triangle.fill(color);
     }
   }
   eraseTriangleAt(pos) {
     const triangle = this.getTriangleAt(pos);
     if (triangle) {
+      const prevColor = triangle.shape ? triangle.shape.fillColor.toCSS(true) : null;
+      if (prevColor !== null) {
+        this.history.addAction(new FillTriangle(triangle, prevColor, null));
+      }
+
       triangle.erase();
     }
   }
   setBackgroundColor(color) {
-    if (color === 'transparent') {
+    if (color === 'transparent' || color === null) {
+      const prevColor = this.background.visible ? this.background.fillColor.toCSS(true) : null;
+
+      if (prevColor !== color) {
+        const ha = new ChangeBackgroundColor(this.background, prevColor, null);
+        this.history.addAction(ha);
+      }
+
       this.background.visible = false;
     } else {
+      const prevColor = this.background.visible ? this.background.fillColor.toCSS(true) : null;
+
+      if (prevColor !== color) {
+        const ha = new ChangeBackgroundColor(this.background, prevColor, color);
+        this.history.addAction(ha);
+      }
+
       this.background.fillColor = color;
       this.background.visible = true;
     }
@@ -138,15 +165,79 @@ class Editor {
   }
   eraseAllTriangles() {
     const triangles = this.getAllFilledTriangles();
-    _.each(triangles, (t) => t.erase());
+    const historyActions = [];
+
+    _.each(triangles, (t) => {
+      const prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+      if (prevColor !== null) {
+        historyActions.push(new FillTriangle(t, prevColor, null));
+      }
+
+      t.erase();
+    });
+
+    if (historyActions.length > 0) {
+      this.history.addAction(historyActions);
+    }
   }
   fillInRectangle(rect, color) {
     const triangles = this.getAllTrianglesInRectangle(rect);
-    _.each(triangles, (t) => t.fill(color));
+    const historyActions = [];
+
+    _.each(triangles, (t) => {
+      const prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+      if (prevColor !== color) {
+        historyActions.push(new FillTriangle(t, prevColor, color));
+      }
+
+      t.fill(color);
+    });
+
+    if (historyActions.length > 0) {
+      this.history.addAction(historyActions);
+    }
   }
   eraseInRectangle(rect) {
     const triangles = this.getAllTrianglesInRectangle(rect);
-    _.each(triangles, (t) => t.erase());
+    const historyActions = [];
+
+    _.each(triangles, (t) => {
+      const prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+      if (prevColor !== null) {
+        historyActions.push(new FillTriangle(t, prevColor, null));
+      }
+      t.erase();
+    });
+
+    if (historyActions.length > 0) {
+      this.history.addAction(historyActions);
+    }
+  }
+  undoAction() {
+    const action = this.history.undo();
+
+    if (!action) {
+      return;
+    }
+
+    if (_.isArray(action)) {
+      _.each(action, (a) => a.undo());
+    } else {
+      action.undo();
+    }
+  }
+  redoAction() {
+    const action = this.history.redo();
+
+    if (!action) {
+      return;
+    }
+
+    if (_.isArray(action)) {
+      _.each(action, (a) => a.redo());
+    } else {
+      action.redo();
+    }
   }
 }
 

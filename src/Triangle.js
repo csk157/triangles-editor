@@ -47,7 +47,7 @@ class Triangle {
   }
   isContainedIn(rect) {
     return _.reduce(this.points, (memo, p) => {
-      return memo && !(p.x < rect.x || p.y < rect.y || p.x > rect.x + rect.width || p.y > rect.y + rect.height)
+      return memo && !(p.x < rect.x || p.y < rect.y || p.x > rect.x + rect.width || p.y > rect.y + rect.height);
     }, true);
   }
 }

@@ -36,6 +36,13 @@ describe('Editor', () => {
     expect(editor.gridLines.length).to.be.above(2);
   });
 
+  it('Editor creates history', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    expect(editor.history).to.be.a('object');
+  });
+
   it('drawGridLines calls Grid.getLines', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
@@ -78,6 +85,14 @@ describe('Editor', () => {
     expect(filledTriangle.shape.fillColor.toCSS(true).toLowerCase()).to.be.equal('#ff0000');
   });
 
+  it('fillTriangleAt creates history action', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
+    expect(editor.history.actions.length).to.be.equal(1);
+  });
+
   it('Erases the right triangle', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
@@ -89,16 +104,37 @@ describe('Editor', () => {
     expect(filledTriangle.shape).to.be.null;
   });
 
+
+  it('eraseTriangleAt creates history action', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
+    editor.eraseTriangleAt({x: 7.5, y: 0.1});
+    expect(editor.history.actions.length).to.be.equal(2);
+  });
+
   it('Erases all the triangles', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
 
     editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
-    editor.fillTriangleAt({x: 7.5, y: 10.1}, '#FF0000');
+    editor.fillTriangleAt({x: 7.5, y: 6.7}, '#FF0000');
     editor.eraseAllTriangles();
 
     expect(editor.getTriangleAt({x: 7.5, y: 0.1}).shape).to.be.null;
-    expect(editor.getTriangleAt({x: 7.5, y: 11.1}).shape).to.be.null;
+    expect(editor.getTriangleAt({x: 7.5, y: 6.7}).shape).to.be.null;
+  });
+
+  it('eraseAllTriangles creates single history action', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
+    editor.fillTriangleAt({x: 7.2, y: 6.1}, '#FF0000');
+    editor.eraseAllTriangles();
+
+    expect(editor.history.actions.length).to.be.equal(3);
   });
 
   it('Sets background', () => {
@@ -107,6 +143,14 @@ describe('Editor', () => {
 
     editor.setBackgroundColor('#FF0000');
     expect(editor.background.fillColor.toCSS(true).toLowerCase()).to.be.equal('#ff0000');
+  });
+
+  it('setBackgroundColor to create history action', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.setBackgroundColor('#FF0000');
+    expect(editor.history.actions.length).to.be.equal(1);
   });
 
   it('Sets transparent background', () => {
@@ -129,6 +173,14 @@ describe('Editor', () => {
     expect(editor.getTriangleAt({x: 10.1, y: 8.3}).shape).to.be.null;
   });
 
+  it('fillInRectangle creates single history action', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillInRectangle({x: -1, y: -1, width: 12, height: 12}, '#FF0000');
+    expect(editor.history.actions.length).to.be.equal(1);
+  });
+
   it('Erases triangles contained in the rectangle', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
@@ -139,5 +191,52 @@ describe('Editor', () => {
 
     editor.eraseInRectangle({x: -1, y: -1, width: 12, height: 12});
     expect(editor.getTriangleAt({x: 0.1, y: 2}).shape).to.be.null;
+  });
+
+  it('eraseInRectangle creates single history action', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillInRectangle({x: -1, y: -1, width: 12, height: 12}, '#FF0000');
+    editor.eraseInRectangle({x: -1, y: -1, width: 12, height: 12});
+    expect(editor.history.actions.length).to.be.equal(2);
+  });
+
+  it('undoAction undoes the action', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
+    editor.undoAction();
+    const res = editor.getTriangleAt({x: 7.5, y: 0.1});
+
+    expect(res.shape).to.be.null;
+  });
+
+  it('undoAction undoes array of actions', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
+    editor.fillTriangleAt({x: 7.5, y: 6.7}, '#FF0000');
+    editor.eraseAllTriangles();
+    editor.undoAction();
+
+    expect(editor.getTriangleAt({x: 7.5, y: 0.1}).shape.fillColor.toCSS(true).toLowerCase()).to.be.equal('#ff0000');
+    expect(editor.getTriangleAt({x: 7.5, y: 6.7}).shape.fillColor.toCSS(true).toLowerCase()).to.be.equal('#ff0000');
+  });
+
+  it('redoAction redoes array of actions', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.fillTriangleAt({x: 7.5, y: 0.1}, '#FF0000');
+    editor.fillTriangleAt({x: 7.5, y: 6.7}, '#FF0000');
+    editor.eraseAllTriangles();
+    editor.undoAction();
+    editor.redoAction();
+
+    expect(editor.getTriangleAt({x: 7.5, y: 0.1}).shape).to.be.null;
+    expect(editor.getTriangleAt({x: 7.5, y: 6.7}).shape).to.be.null;
   });
 });
