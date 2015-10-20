@@ -1,2 +1,4 @@
-export ChangeBackgroundColor from './ChangeBackgroundColor';
-export FillTriangle from './FillTriangle';
+import ChangeBackgroundColor from './ChangeBackgroundColor';
+import FillTriangle from './FillTriangle';
+
+export { ChangeBackgroundColor, FillTriangle };

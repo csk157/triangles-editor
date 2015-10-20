@@ -3,6 +3,7 @@
  * Copyright (c) Konstantin Tarkus <hello@tarkus.me> | The MIT License
  */
 
+import _ from 'underscore';
 import fs from 'fs';
 import path from 'path';
 import mkdirp from 'mkdirp';
@@ -43,14 +44,16 @@ const readFile = filename => new Promise((resolve, reject) => {
   );
 });
 
-const writeFile = (filename, contents) => new Promise((resolve, reject) => {
-  fs.writeFile(filename, contents, 'utf8', err =>
-    err ? reject(err) : resolve()
-  );
-});
-
 const makeDir = name => new Promise((resolve, reject) => {
   mkdirp(name, err => err ? reject(err) : resolve());
+});
+
+const writeFile = (filename, contents) => new Promise((resolve, reject) => {
+  makeDir(path.dirname(filename)).then(() => {
+    fs.writeFile(filename, contents, 'utf8', err =>
+      err ? reject(err) : resolve()
+    );
+  });
 });
 
 const copyFile = (src, dest) => new Promise((resolve, reject) => {

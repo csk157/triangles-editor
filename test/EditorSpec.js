@@ -33,7 +33,7 @@ describe('Editor', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
 
-    expect(editor.gridLines.length).to.be.above(2);
+    expect(editor.gridLines).to.be.a('object');
   });
 
   it('Editor creates history', () => {
@@ -238,5 +238,47 @@ describe('Editor', () => {
 
     expect(editor.getTriangleAt({x: 7.5, y: 0.1}).shape).to.be.null;
     expect(editor.getTriangleAt({x: 7.5, y: 6.7}).shape).to.be.null;
+  });
+
+  it('hideGrid hides the grid', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.hideGrid()
+    expect(editor.gridLines.visible).to.be.false;
+  });
+
+  it('showGrid hides the grid', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.showGrid()
+    expect(editor.gridLines.visible).to.be.true;
+  });
+
+  it('toDataUrl hides grid and shows again', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    Chai.spy.on(editor, 'hideGrid');
+    Chai.spy.on(editor, 'showGrid');
+
+    const res = editor.toDataUrl();
+    expect(editor.hideGrid).to.have.been.called();
+    expect(editor.showGrid).to.have.been.called();
+    expect(res).to.be.a('string');
+  });
+
+  it('toSVG hides grid and shows again', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    Chai.spy.on(editor, 'hideGrid');
+    Chai.spy.on(editor, 'showGrid');
+
+    const res = editor.toSVG();
+    expect(editor.hideGrid).to.have.been.called();
+    expect(editor.showGrid).to.have.been.called();
+    expect(res).to.be.a('string');
   });
 });

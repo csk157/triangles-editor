@@ -11,6 +11,7 @@ const cleanup = async () => {
 const src = async () => {
   const babel = require('babel');
   const files = await fs.getFiles('src');
+  // fs.makeDir('lib/history_actions');
 
   for (const file of files) {
     const source = await fs.readFile('src/' + file);

@@ -7,8 +7,8 @@ Draw using triangles on a grid.
 [x] Add history controls
 [x] Add background
 [x] Clear all triangles
-[X] Fill all in an area (like if big square brush was used)
-[ ] Export SVG
-[ ] Export PNG
+[x] Fill all in an area (like if big square brush was used)
+[x] Export SVG
+[x] Export PNG
 [ ] Save JSON
 [ ] Load JSON

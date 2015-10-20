@@ -9,7 +9,7 @@ class Editor {
   constructor(elem, {unitSize}) {
     this.width = Math.floor(elem.width / unitSize);
     this.height = Math.floor(elem.height / unitSize);
-    this.gridLines = [];
+    this.gridLines = null;
     this.background = null;
 
     this.grid = new Grid({
@@ -18,6 +18,7 @@ class Editor {
     }, unitSize);
     this.history = new History();
     this.canvas = Paper.setup(elem);
+    this.element = elem;
     this.drawGridLines();
     this.createTriangles();
     this.createBackground();
@@ -27,15 +28,15 @@ class Editor {
 
   drawGridLines() {
     const lines = this.grid.getLines();
-    _.each(lines, (l) => {
-      const line = new Paper.Path.Line({
+    const gridLines = _.map(lines, (l) => {
+      return new Paper.Path.Line({
         from: l.from,
         to: l.to,
         strokeColor: '#666',
       });
-
-      this.gridLines.push(line);
     });
+
+    this.gridLines = new Paper.Group(gridLines);
   }
 
   createBackground() {
@@ -238,6 +239,26 @@ class Editor {
     } else {
       action.redo();
     }
+  }
+  hideGrid() {
+    this.gridLines.visible = false;
+  }
+  showGrid() {
+    this.gridLines.visible = true;
+  }
+  toDataUrl() {
+    this.hideGrid();
+    const res = this.element.toDataURL();
+    this.showGrid();
+
+    return res;
+  }
+  toSVG() {
+    this.hideGrid();
+    const res = this.canvas.project.exportSVG({asString: true});
+    this.showGrid();
+
+    return res;
   }
 }
 

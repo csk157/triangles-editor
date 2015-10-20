@@ -27,19 +27,33 @@ var _Triangle = require('./Triangle');
 
 var _Triangle2 = _interopRequireDefault(_Triangle);
 
+var _History = require('./History');
+
+var _History2 = _interopRequireDefault(_History);
+
+var _history_actions = require('./history_actions');
+
 var Editor = (function () {
   function Editor(elem, _ref) {
     var unitSize = _ref.unitSize;
 
     _classCallCheck(this, Editor);
 
+    this.width = Math.floor(elem.width / unitSize);
+    this.height = Math.floor(elem.height / unitSize);
+    this.gridLines = null;
+    this.background = null;
+
     this.grid = new _Grid2['default']({
-      width: Math.floor(elem.width / unitSize),
-      height: Math.floor(elem.height / unitSize) }, unitSize);
+      width: this.width,
+      height: this.height
+    }, unitSize);
+    this.history = new _History2['default']();
     this.canvas = _paper2['default'].setup(elem);
-    this.gridLines = [];
+    this.element = elem;
     this.drawGridLines();
     this.createTriangles();
+    this.createBackground();
 
     _paper2['default'].view.draw();
   }
@@ -47,17 +61,25 @@ var Editor = (function () {
   _createClass(Editor, [{
     key: 'drawGridLines',
     value: function drawGridLines() {
-      var _this = this;
-
       var lines = this.grid.getLines();
-      _underscore2['default'].each(lines, function (l) {
-        var line = new _paper2['default'].Path.Line({
+      var gridLines = _underscore2['default'].map(lines, function (l) {
+        return new _paper2['default'].Path.Line({
           from: l.from,
           to: l.to,
           strokeColor: '#666'
         });
+      });
 
-        _this.gridLines.push(line);
+      this.gridLines = new _paper2['default'].Group(gridLines);
+    }
+  }, {
+    key: 'createBackground',
+    value: function createBackground() {
+      this.background = new _paper2['default'].Path.Rectangle({
+        point: new _paper2['default'].Point(0, 0),
+        size: new _paper2['default'].Size(this.width * this.unitSize, this.height * this.width * this.unitSize),
+        fillColor: '#FF0000',
+        visible: false
       });
     }
   }, {
@@ -84,12 +106,12 @@ var Editor = (function () {
   }, {
     key: 'createTriangles',
     value: function createTriangles() {
-      var _this2 = this;
+      var _this = this;
 
       this.grid.iterateCells(function (pos) {
-        var rect = _this2.grid.getCellRealRectangle(pos);
-        var triangles = _this2.createTrianglesFromRect(rect);
-        _this2.grid.setGridValue(pos, triangles);
+        var rect = _this.grid.getCellRealRectangle(pos);
+        var triangles = _this.createTrianglesFromRect(rect);
+        _this.grid.setGridValue(pos, triangles);
       });
     }
   }, {
@@ -108,6 +130,11 @@ var Editor = (function () {
     value: function fillTriangleAt(pos, color) {
       var triangle = this.getTriangleAt(pos);
       if (triangle) {
+        var prevColor = triangle.shape ? triangle.shape.fillColor.toCSS(true) : null;
+        if (prevColor !== color) {
+          this.history.addAction(new _history_actions.FillTriangle(triangle, prevColor, color));
+        }
+
         triangle.fill(color);
       }
     }
@@ -116,8 +143,203 @@ var Editor = (function () {
     value: function eraseTriangleAt(pos) {
       var triangle = this.getTriangleAt(pos);
       if (triangle) {
+        var prevColor = triangle.shape ? triangle.shape.fillColor.toCSS(true) : null;
+        if (prevColor !== null) {
+          this.history.addAction(new _history_actions.FillTriangle(triangle, prevColor, null));
+        }
+
         triangle.erase();
       }
+    }
+  }, {
+    key: 'setBackgroundColor',
+    value: function setBackgroundColor(color) {
+      if (color === 'transparent' || color === null) {
+        var prevColor = this.background.visible ? this.background.fillColor.toCSS(true) : null;
+
+        if (prevColor !== color) {
+          var ha = new _history_actions.ChangeBackgroundColor(this.background, prevColor, null);
+          this.history.addAction(ha);
+        }
+
+        this.background.visible = false;
+      } else {
+        var prevColor = this.background.visible ? this.background.fillColor.toCSS(true) : null;
+
+        if (prevColor !== color) {
+          var ha = new _history_actions.ChangeBackgroundColor(this.background, prevColor, color);
+          this.history.addAction(ha);
+        }
+
+        this.background.fillColor = color;
+        this.background.visible = true;
+      }
+    }
+  }, {
+    key: 'getAllTriangles',
+    value: function getAllTriangles() {
+      var _this2 = this;
+
+      var triangles = [];
+      this.grid.iterateCells(function (pos) {
+        var vals = _underscore2['default'].values(_this2.grid.getGridValue(pos, triangles));
+        triangles.push(vals);
+      });
+
+      return _underscore2['default'].flatten(triangles);
+    }
+  }, {
+    key: 'getAllFilledTriangles',
+    value: function getAllFilledTriangles() {
+      return _underscore2['default'].filter(this.getAllTriangles(), function (t) {
+        return t.shape !== null;
+      });
+    }
+  }, {
+    key: 'getAllTrianglesInRectangle',
+    value: function getAllTrianglesInRectangle(rect) {
+      var triangles = [];
+      var leftTop = { x: rect.x, y: rect.y };
+      var rightBottom = { x: rect.x + rect.width, y: rect.y + rect.height };
+
+      var leftTopGridPos = this.grid.getGridPosition(leftTop);
+      var rightBottomGridPos = this.grid.getGridPosition(rightBottom);
+
+      if (!leftTopGridPos) {
+        leftTopGridPos = { x: 0, y: 0 };
+      }
+
+      if (!rightBottomGridPos) {
+        rightBottomGridPos = { x: this.grid.width - 1, y: this.grid.height - 1 };
+      }
+
+      for (var i = leftTopGridPos.x; i <= rightBottom.x; i++) {
+        for (var j = leftTopGridPos.y; j <= rightBottom.y; j++) {
+          triangles.push(_underscore2['default'].values(this.grid.getGridValue({ x: i, y: j })));
+        }
+      }
+
+      return _underscore2['default'].filter(_underscore2['default'].flatten(triangles), function (t) {
+        return t.isContainedIn(rect);
+      });
+    }
+  }, {
+    key: 'eraseAllTriangles',
+    value: function eraseAllTriangles() {
+      var triangles = this.getAllFilledTriangles();
+      var historyActions = [];
+
+      _underscore2['default'].each(triangles, function (t) {
+        var prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+        if (prevColor !== null) {
+          historyActions.push(new _history_actions.FillTriangle(t, prevColor, null));
+        }
+
+        t.erase();
+      });
+
+      if (historyActions.length > 0) {
+        this.history.addAction(historyActions);
+      }
+    }
+  }, {
+    key: 'fillInRectangle',
+    value: function fillInRectangle(rect, color) {
+      var triangles = this.getAllTrianglesInRectangle(rect);
+      var historyActions = [];
+
+      _underscore2['default'].each(triangles, function (t) {
+        var prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+        if (prevColor !== color) {
+          historyActions.push(new _history_actions.FillTriangle(t, prevColor, color));
+        }
+
+        t.fill(color);
+      });
+
+      if (historyActions.length > 0) {
+        this.history.addAction(historyActions);
+      }
+    }
+  }, {
+    key: 'eraseInRectangle',
+    value: function eraseInRectangle(rect) {
+      var triangles = this.getAllTrianglesInRectangle(rect);
+      var historyActions = [];
+
+      _underscore2['default'].each(triangles, function (t) {
+        var prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+        if (prevColor !== null) {
+          historyActions.push(new _history_actions.FillTriangle(t, prevColor, null));
+        }
+        t.erase();
+      });
+
+      if (historyActions.length > 0) {
+        this.history.addAction(historyActions);
+      }
+    }
+  }, {
+    key: 'undoAction',
+    value: function undoAction() {
+      var action = this.history.undo();
+
+      if (!action) {
+        return;
+      }
+
+      if (_underscore2['default'].isArray(action)) {
+        _underscore2['default'].each(action, function (a) {
+          return a.undo();
+        });
+      } else {
+        action.undo();
+      }
+    }
+  }, {
+    key: 'redoAction',
+    value: function redoAction() {
+      var action = this.history.redo();
+
+      if (!action) {
+        return;
+      }
+
+      if (_underscore2['default'].isArray(action)) {
+        _underscore2['default'].each(action, function (a) {
+          return a.redo();
+        });
+      } else {
+        action.redo();
+      }
+    }
+  }, {
+    key: 'hideGrid',
+    value: function hideGrid() {
+      this.gridLines.visible = false;
+    }
+  }, {
+    key: 'showGrid',
+    value: function showGrid() {
+      this.gridLines.visible = true;
+    }
+  }, {
+    key: 'toDataUrl',
+    value: function toDataUrl() {
+      this.hideGrid();
+      var res = this.element.toDataURL();
+      this.showGrid();
+
+      return res;
+    }
+  }, {
+    key: 'toSVG',
+    value: function toSVG() {
+      this.hideGrid();
+      var res = this.canvas.project.exportSVG({ asString: true });
+      this.showGrid();
+
+      return res;
     }
   }]);
 
@@ -126,7 +348,7 @@ var Editor = (function () {
 
 exports['default'] = Editor;
 module.exports = exports['default'];
-},{"./Grid":2,"./Triangle":3,"paper":5,"underscore":6}],2:[function(require,module,exports){
+},{"./Grid":2,"./History":3,"./Triangle":4,"./history_actions":8,"paper":10,"underscore":11}],2:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -284,6 +506,61 @@ var Grid = (function () {
 exports["default"] = Grid;
 module.exports = exports["default"];
 },{}],3:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var History = (function () {
+  function History() {
+    _classCallCheck(this, History);
+
+    this.actions = [];
+    this.currentIndex = -1;
+  }
+
+  _createClass(History, [{
+    key: "addAction",
+    value: function addAction(action) {
+      this.actions = this.actions.slice(0, this.currentIndex + 1);
+      this.actions.push(action);
+      this.currentIndex++;
+    }
+  }, {
+    key: "undo",
+    value: function undo() {
+      if (this.actions.length === 0 || this.currentIndex === -1) {
+        return null;
+      }
+
+      var res = this.actions[this.currentIndex];
+      this.currentIndex--;
+
+      return res;
+    }
+  }, {
+    key: "redo",
+    value: function redo() {
+      if (this.actions.length === 0 || this.currentIndex + 1 >= this.actions.length) {
+        return null;
+      }
+
+      this.currentIndex++;
+      return this.actions[this.currentIndex];
+    }
+  }]);
+
+  return History;
+})();
+
+exports["default"] = History;
+module.exports = exports["default"];
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -292,7 +569,13 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var _underscore = require('underscore');
+
+var _underscore2 = _interopRequireDefault(_underscore);
 
 var _paper = require('paper');
 
@@ -340,8 +623,17 @@ var Triangle = (function () {
       this.erase();
       this.shape = new _paper.Path({
         segments: [new _paper.Point(this.points[0].x, this.points[0].y), new _paper.Point(this.points[1].x, this.points[1].y), new _paper.Point(this.points[2].x, this.points[2].y)],
-        fillColor: color
+        fillColor: color,
+        strokeWidth: 0.1,
+        strokeColor: color
       });
+    }
+  }, {
+    key: 'isContainedIn',
+    value: function isContainedIn(rect) {
+      return _underscore2['default'].reduce(this.points, function (memo, p) {
+        return memo && !(p.x < rect.x || p.y < rect.y || p.x > rect.x + rect.width || p.y > rect.y + rect.height);
+      }, true);
     }
   }], [{
     key: 'area',
@@ -355,7 +647,183 @@ var Triangle = (function () {
 
 exports['default'] = Triangle;
 module.exports = exports['default'];
-},{"paper":5}],4:[function(require,module,exports){
+},{"paper":10,"underscore":11}],5:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _HistoryAction2 = require('./HistoryAction');
+
+var _HistoryAction3 = _interopRequireDefault(_HistoryAction2);
+
+var ChangeBackgroundColor = (function (_HistoryAction) {
+  _inherits(ChangeBackgroundColor, _HistoryAction);
+
+  function ChangeBackgroundColor(background) {
+    var previousColor = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+    var nextColor = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+
+    _classCallCheck(this, ChangeBackgroundColor);
+
+    _get(Object.getPrototypeOf(ChangeBackgroundColor.prototype), 'constructor', this).call(this);
+    this.background = background;
+    this.previousColor = previousColor;
+    this.nextColor = nextColor;
+  }
+
+  _createClass(ChangeBackgroundColor, [{
+    key: 'undo',
+    value: function undo() {
+      _get(Object.getPrototypeOf(ChangeBackgroundColor.prototype), 'undo', this).call(this);
+      if (this.previousColor) {
+        this.background.fillColor = this.previousColor;
+        this.background.visible = true;
+      } else {
+        this.background.visible = false;
+      }
+    }
+  }, {
+    key: 'redo',
+    value: function redo() {
+      _get(Object.getPrototypeOf(ChangeBackgroundColor.prototype), 'redo', this).call(this);
+      if (this.nextColor) {
+        this.background.fillColor = this.nextColor;
+        this.background.visible = true;
+      } else {
+        this.background.visible = false;
+      }
+    }
+  }]);
+
+  return ChangeBackgroundColor;
+})(_HistoryAction3['default']);
+
+exports['default'] = ChangeBackgroundColor;
+module.exports = exports['default'];
+},{"./HistoryAction":7}],6:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(_x3, _x4, _x5) { var _again = true; _function: while (_again) { var object = _x3, property = _x4, receiver = _x5; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x3 = parent; _x4 = property; _x5 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var _HistoryAction2 = require('./HistoryAction');
+
+var _HistoryAction3 = _interopRequireDefault(_HistoryAction2);
+
+var FillTriangle = (function (_HistoryAction) {
+  _inherits(FillTriangle, _HistoryAction);
+
+  function FillTriangle(triangle) {
+    var previousColor = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+    var nextColor = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+
+    _classCallCheck(this, FillTriangle);
+
+    _get(Object.getPrototypeOf(FillTriangle.prototype), 'constructor', this).call(this);
+    this.triangle = triangle;
+    this.previousColor = previousColor;
+    this.nextColor = nextColor;
+  }
+
+  _createClass(FillTriangle, [{
+    key: 'undo',
+    value: function undo() {
+      _get(Object.getPrototypeOf(FillTriangle.prototype), 'undo', this).call(this);
+      if (this.previousColor) {
+        this.triangle.fill(this.previousColor);
+      } else {
+        this.triangle.erase();
+      }
+    }
+  }, {
+    key: 'redo',
+    value: function redo() {
+      _get(Object.getPrototypeOf(FillTriangle.prototype), 'redo', this).call(this);
+      if (this.nextColor) {
+        this.triangle.fill(this.nextColor);
+      } else {
+        this.triangle.erase();
+      }
+    }
+  }]);
+
+  return FillTriangle;
+})(_HistoryAction3['default']);
+
+exports['default'] = FillTriangle;
+module.exports = exports['default'];
+},{"./HistoryAction":7}],7:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var HistoryAction = (function () {
+  function HistoryAction() {
+    _classCallCheck(this, HistoryAction);
+  }
+
+  _createClass(HistoryAction, [{
+    key: "undo",
+    value: function undo() {}
+  }, {
+    key: "redo",
+    value: function redo() {}
+  }]);
+
+  return HistoryAction;
+})();
+
+exports["default"] = HistoryAction;
+module.exports = exports["default"];
+},{}],8:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _ChangeBackgroundColor = require('./ChangeBackgroundColor');
+
+var _ChangeBackgroundColor2 = _interopRequireDefault(_ChangeBackgroundColor);
+
+var _FillTriangle = require('./FillTriangle');
+
+var _FillTriangle2 = _interopRequireDefault(_FillTriangle);
+
+exports.ChangeBackgroundColor = _ChangeBackgroundColor2['default'];
+exports.FillTriangle = _FillTriangle2['default'];
+},{"./ChangeBackgroundColor":5,"./FillTriangle":6}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -374,7 +842,7 @@ if (window) {
   window.Editor = _EditorJs2['default'];
 }
 module.exports = exports['default'];
-},{"./Editor.js":1}],5:[function(require,module,exports){
+},{"./Editor.js":1}],10:[function(require,module,exports){
 /*!
  * Paper.js v0.9.24 - The Swiss Army Knife of Vector Graphics Scripting.
  * http://paperjs.org/
@@ -13600,7 +14068,7 @@ if (typeof define === 'function' && define.amd) {
 return paper;
 };
 
-},{}],6:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 //     Underscore.js 1.7.0
 //     http://underscorejs.org
 //     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -15017,4 +15485,4 @@ return paper;
   }
 }.call(this));
 
-},{}]},{},[4]);
+},{}]},{},[9]);
