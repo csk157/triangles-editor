@@ -622,10 +622,10 @@ var Triangle = (function () {
     value: function fill(color) {
       this.erase();
       this.shape = new _paper.Path({
-        segments: [new _paper.Point(this.points[0].x, this.points[0].y), new _paper.Point(this.points[1].x, this.points[1].y), new _paper.Point(this.points[2].x, this.points[2].y)],
+        segments: [new _paper.Point(this.points[0].x, this.points[0].y), new _paper.Point(this.points[1].x, this.points[1].y), new _paper.Point(this.points[2].x, this.points[2].y), new _paper.Point(this.points[0].x, this.points[0].y)],
         fillColor: color,
-        strokeWidth: 0.1,
-        strokeColor: color
+        strokeColor: color,
+        strokeWidth: 1
       });
     }
   }, {
