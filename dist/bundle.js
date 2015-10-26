@@ -41,6 +41,7 @@ var Editor = (function () {
 
     this.width = Math.floor(elem.width / unitSize);
     this.height = Math.floor(elem.height / unitSize);
+    this.unitSize = unitSize;
     this.gridLines = null;
     this.background = null;
 
@@ -51,9 +52,9 @@ var Editor = (function () {
     this.history = new _History2['default']();
     this.canvas = _paper2['default'].setup(elem);
     this.element = elem;
+    this.createBackground();
     this.drawGridLines();
     this.createTriangles();
-    this.createBackground();
 
     _paper2['default'].view.draw();
   }
@@ -174,6 +175,8 @@ var Editor = (function () {
         this.background.fillColor = color;
         this.background.visible = true;
       }
+
+      _paper2['default'].view.draw();
     }
   }, {
     key: 'getAllTriangles',
