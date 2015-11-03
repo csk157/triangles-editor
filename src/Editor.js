@@ -245,9 +245,11 @@ class Editor {
   }
   hideGrid() {
     this.gridLines.visible = false;
+    Paper.view.draw();
   }
   showGrid() {
     this.gridLines.visible = true;
+    Paper.view.draw();
   }
   toDataUrl() {
     this.hideGrid();
