@@ -1,14 +1,20 @@
-# Triangle editor
+Triangle editor
+===============
 
-Draw using triangles on a grid.
+Library, which allows you to setup canvas and draw on it using triangles.
+
+## Example
+A very basic example in `example/index.html`
+
+## Building
+
+`npm run build`
+
+## Testing
+
+`npm run test`
 
 ## TODO
-
-[x] Add history controls
-[x] Add background
-[x] Clear all triangles
-[x] Fill all in an area (like if big square brush was used)
-[x] Export SVG
-[x] Export PNG
-[ ] Save JSON
-[ ] Load JSON
+- More complete example
+- Remove unused dependencies from `package.json`
+- Docs?
