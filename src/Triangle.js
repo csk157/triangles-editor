@@ -41,11 +41,13 @@ class Triangle {
         new Point(this.points[0].x, this.points[0].y),
         new Point(this.points[1].x, this.points[1].y),
         new Point(this.points[2].x, this.points[2].y),
-        new Point(this.points[0].x, this.points[0].y),
       ],
       fillColor: color,
+      closed: true,
+      strokeWidth: 0.5,
       strokeColor: color,
-      strokeWidth: 1,
+      strokeCap: 'round',
+      strokeJoin: 'round',
     });
   }
   isContainedIn(rect) {

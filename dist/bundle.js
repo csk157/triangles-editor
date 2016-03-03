@@ -320,11 +320,13 @@ var Editor = (function () {
     key: 'hideGrid',
     value: function hideGrid() {
       this.gridLines.visible = false;
+      _paper2['default'].view.draw();
     }
   }, {
     key: 'showGrid',
     value: function showGrid() {
       this.gridLines.visible = true;
+      _paper2['default'].view.draw();
     }
   }, {
     key: 'toDataUrl',
@@ -625,10 +627,13 @@ var Triangle = (function () {
     value: function fill(color) {
       this.erase();
       this.shape = new _paper.Path({
-        segments: [new _paper.Point(this.points[0].x, this.points[0].y), new _paper.Point(this.points[1].x, this.points[1].y), new _paper.Point(this.points[2].x, this.points[2].y), new _paper.Point(this.points[0].x, this.points[0].y)],
+        segments: [new _paper.Point(this.points[0].x, this.points[0].y), new _paper.Point(this.points[1].x, this.points[1].y), new _paper.Point(this.points[2].x, this.points[2].y)],
         fillColor: color,
+        closed: true,
+        strokeWidth: 0.5,
         strokeColor: color,
-        strokeWidth: 1
+        strokeCap: 'round',
+        strokeJoin: 'round'
       });
     }
   }, {
