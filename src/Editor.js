@@ -252,16 +252,30 @@ class Editor {
     Paper.view.draw();
   }
   toDataUrl() {
-    this.hideGrid();
+    const gridLinesVisible = this.gridLines.visible;
+    if (gridLinesVisible) {
+      this.hideGrid();
+    }
+
     const res = this.element.toDataURL();
-    this.showGrid();
+
+    if (gridLinesVisible) {
+      this.showGrid();
+    }
 
     return res;
   }
   toSVG() {
-    this.hideGrid();
+    const gridLinesVisible = this.gridLines.visible;
+    if (gridLinesVisible) {
+      this.hideGrid();
+    }
+
     const res = this.canvas.project.exportSVG({asString: true});
-    this.showGrid();
+
+    if (gridLinesVisible) {
+      this.showGrid();
+    }
 
     return res;
   }

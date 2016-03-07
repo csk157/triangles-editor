@@ -21,7 +21,7 @@ describe('Editor', () => {
     expect(editor.grid.width).to.be.equal(40);
     expect(editor.grid.height).to.be.equal(20);
   });
-  
+
   it('Editor creates Paper instance', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
@@ -256,29 +256,69 @@ describe('Editor', () => {
     expect(editor.gridLines.visible).to.be.true;
   });
 
-  it('toDataUrl hides grid and shows again', () => {
+  it('toDataUrl returns string', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
 
-    Chai.spy.on(editor, 'hideGrid');
-    Chai.spy.on(editor, 'showGrid');
-
-    const res = editor.toDataUrl();
-    expect(editor.hideGrid).to.have.been.called();
-    expect(editor.showGrid).to.have.been.called();
-    expect(res).to.be.a('string');
+    expect(editor.toDataUrl()).to.be.a('string');
   });
 
-  it('toSVG hides grid and shows again', () => {
+  it('toDataUrl when grid is visible hides it and shows it again', () => {
     const el = new Canvas(200, 100);
     const editor = new Editor(el, {unitSize: 5});
 
+    editor.showGrid();
     Chai.spy.on(editor, 'hideGrid');
     Chai.spy.on(editor, 'showGrid');
+    editor.toDataUrl();
 
-    const res = editor.toSVG();
     expect(editor.hideGrid).to.have.been.called();
     expect(editor.showGrid).to.have.been.called();
-    expect(res).to.be.a('string');
+  });
+
+  it('toDataUrl when grid is not visible does not show it', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.hideGrid();
+    Chai.spy.on(editor, 'hideGrid');
+    Chai.spy.on(editor, 'showGrid');
+    editor.toDataUrl();
+
+    expect(editor.hideGrid).to.not.have.been.called();
+    expect(editor.showGrid).to.not.have.been.called();
+  });
+
+  it('toSVG returns string', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    expect(editor.toSVG()).to.be.a('string');
+  });
+
+  it('toSVG when grid is visible hides it and shows it again', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.showGrid();
+    Chai.spy.on(editor, 'hideGrid');
+    Chai.spy.on(editor, 'showGrid');
+    editor.toSVG();
+
+    expect(editor.hideGrid).to.have.been.called();
+    expect(editor.showGrid).to.have.been.called();
+  });
+
+  it('toSVG when grid is not visible does not show it', () => {
+    const el = new Canvas(200, 100);
+    const editor = new Editor(el, {unitSize: 5});
+
+    editor.hideGrid();
+    Chai.spy.on(editor, 'hideGrid');
+    Chai.spy.on(editor, 'showGrid');
+    editor.toSVG();
+
+    expect(editor.hideGrid).to.not.have.been.called();
+    expect(editor.showGrid).to.not.have.been.called();
   });
 });
