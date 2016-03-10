@@ -1,9 +1,9 @@
 {
   "name": "triangles-editor",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "",
   "repository": "csk157/triangles-editor",
-  "author": "Ceslovas Lopan",
+  "author": "Česlovas Lopan",
   "license": "MIT",
   "main": "lib/index.js",
   "dependencies": {

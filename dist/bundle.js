@@ -331,18 +331,32 @@ var Editor = (function () {
   }, {
     key: 'toDataUrl',
     value: function toDataUrl() {
-      this.hideGrid();
+      var gridLinesVisible = this.gridLines.visible;
+      if (gridLinesVisible) {
+        this.hideGrid();
+      }
+
       var res = this.element.toDataURL();
-      this.showGrid();
+
+      if (gridLinesVisible) {
+        this.showGrid();
+      }
 
       return res;
     }
   }, {
     key: 'toSVG',
     value: function toSVG() {
-      this.hideGrid();
+      var gridLinesVisible = this.gridLines.visible;
+      if (gridLinesVisible) {
+        this.hideGrid();
+      }
+
       var res = this.canvas.project.exportSVG({ asString: true });
-      this.showGrid();
+
+      if (gridLinesVisible) {
+        this.showGrid();
+      }
 
       return res;
     }
