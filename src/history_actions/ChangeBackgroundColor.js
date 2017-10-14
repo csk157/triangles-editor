@@ -1,29 +1,19 @@
 import HistoryAction from './HistoryAction';
 
 class ChangeBackgroundColor extends HistoryAction {
-  constructor(background, previousColor = null, nextColor = null) {
+  constructor(editor, previousColor = null, nextColor = null) {
     super();
-    this.background = background;
+    this.editor = editor;
     this.previousColor = previousColor;
     this.nextColor = nextColor;
   }
   undo() {
     super.undo();
-    if (this.previousColor) {
-      this.background.fillColor = this.previousColor;
-      this.background.visible = true;
-    } else {
-      this.background.visible = false;
-    }
+    this.editor.background = this.previousColor;
   }
   redo() {
     super.redo();
-    if (this.nextColor) {
-      this.background.fillColor = this.nextColor;
-      this.background.visible = true;
-    } else {
-      this.background.visible = false;
-    }
+    this.editor.background = this.nextColor;
   }
 }
 

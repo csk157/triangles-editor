@@ -1,52 +1,35 @@
-import _ from 'underscore';
-import Paper from 'paper';
+import flatten from 'array-flatten';
 import Grid from './Grid';
 import Triangle from './Triangle';
 import History from './History';
 import { FillTriangle, ChangeBackgroundColor } from './history_actions';
 
 class Editor {
-  constructor(elem, {unitSize}) {
-    this.width = Math.floor(elem.width / unitSize);
-    this.height = Math.floor(elem.height / unitSize);
+  constructor({ unitSize, renderer, width, height }) {
+    this.width = Math.floor(width / unitSize);
+    this.height = Math.floor(height / unitSize);
     this.unitSize = unitSize;
-    this.gridLines = null;
     this.background = null;
+    this.filledTriangles = [];
 
+    this.isGridVisible = true;
     this.grid = new Grid({
       width: this.width,
       height: this.height,
     }, unitSize);
     this.history = new History();
-    this.canvas = Paper.setup(elem);
-    this.element = elem;
-    this.createBackground();
-    this.drawGridLines();
+    this.renderer = renderer;
+    this.renderer.setupGridLines(this.grid.getLines());
     this.createTriangles();
-
-    Paper.view.draw();
   }
 
-  drawGridLines() {
-    const lines = this.grid.getLines();
-    const gridLines = _.map(lines, (l) => {
-      return new Paper.Path.Line({
-        from: l.from,
-        to: l.to,
-        strokeColor: '#666',
-      });
-    });
+  begin() {
+    const loop = () => {
+      this.renderer.render(this.filledTriangles);
+      window.requestAnimationFrame(loop);
+    }
 
-    this.gridLines = new Paper.Group(gridLines);
-  }
-
-  createBackground() {
-    this.background = new Paper.Path.Rectangle({
-      point: new Paper.Point(0, 0),
-      size: new Paper.Size(this.width * this.unitSize, this.height * this.width * this.unitSize),
-      fillColor: '#FF0000',
-      visible: false,
-    });
+    loop();
   }
 
   createTrianglesFromRect(rect) {
@@ -80,76 +63,91 @@ class Editor {
   getTriangleAt(pos) {
     const gridPosition = this.grid.getGridPosition(pos);
     const gridValue = this.grid.getGridValue(gridPosition);
-    const triangles = _.values(gridValue);
+    const triangles = Object.values(gridValue);
 
-    return _.find(triangles, (triangle) => triangle.isPointInside(pos));
+    return triangles.find((triangle) => triangle.isPointInside(pos));
   }
 
-  fillTriangleAt(pos, color) {
+  fillTriangleAt(pos, color, alpha) {
     const triangle = this.getTriangleAt(pos);
+
     if (triangle) {
-      const prevColor = triangle.shape ? triangle.shape.fillColor.toCSS(true) : null;
+      const prevColor = triangle.fill;
       if (prevColor !== color) {
         this.history.addAction(new FillTriangle(triangle, prevColor, color));
       }
 
-      triangle.fill(color);
+      triangle.fill = color;
+      triangle.alpha = alpha;
+
+      if (prevColor === null) {
+        this.filledTriangles = [...this.filledTriangles, triangle];
+      }
     }
   }
+
   eraseTriangleAt(pos) {
     const triangle = this.getTriangleAt(pos);
     if (triangle) {
-      const prevColor = triangle.shape ? triangle.shape.fillColor.toCSS(true) : null;
+      const prevColor = triangle.fill;
       if (prevColor !== null) {
         this.history.addAction(new FillTriangle(triangle, prevColor, null));
       }
 
       triangle.erase();
+
+      if (prevColor) {
+        this.filledTriangles = this.filledTriangles.filter(t => t !== triangle);
+      }
     }
   }
-  setBackgroundColor(color) {
+
+  setBackgroundColor(color, alpha = 1) {
     if (color === 'transparent' || color === null) {
-      const prevColor = this.background.visible ? this.background.fillColor.toCSS(true) : null;
+      const prevColor = this.background;
 
       if (prevColor !== color) {
-        const ha = new ChangeBackgroundColor(this.background, prevColor, null);
+        const ha = new ChangeBackgroundColor(this, prevColor, null);
         this.history.addAction(ha);
       }
 
-      this.background.visible = false;
+      this.background = null;
     } else {
-      const prevColor = this.background.visible ? this.background.fillColor.toCSS(true) : null;
+      const prevColor = this.background;
 
       if (prevColor !== color) {
-        const ha = new ChangeBackgroundColor(this.background, prevColor, color);
+        const ha = new ChangeBackgroundColor(this, prevColor, color);
         this.history.addAction(ha);
       }
 
-      this.background.fillColor = color;
-      this.background.visible = true;
+      this.background = color;
+      this.backgroundAlpha = alpha;
     }
 
-    Paper.view.draw();
+    this.renderer.setBackgroundColor(color, alpha);
   }
+
   getAllTriangles() {
-    const triangles = [];
+    let triangles = [];
     this.grid.iterateCells((pos) => {
-      const vals = _.values(this.grid.getGridValue(pos, triangles));
-      triangles.push(vals);
+      const vals = Object.values(this.grid.getGridValue(pos, triangles));
+      triangles = [...triangles, ...vals];
     });
 
-    return _.flatten(triangles);
+    return triangles;
   }
+
   getAllFilledTriangles() {
-    return _.filter(this.getAllTriangles(), (t) => t.shape !== null);
+    return this.filledTriangles;
   }
+
   getAllTrianglesInRectangle(rect) {
-    const triangles = [];
     const leftTop = {x: rect.x, y: rect.y};
     const rightBottom = {x: rect.x + rect.width, y: rect.y + rect.height};
 
     let leftTopGridPos = this.grid.getGridPosition(leftTop);
     let rightBottomGridPos = this.grid.getGridPosition(rightBottom);
+
 
     if (!leftTopGridPos) {
       leftTopGridPos = {x: 0, y: 0};
@@ -159,20 +157,18 @@ class Editor {
       rightBottomGridPos = {x: this.grid.width - 1, y: this.grid.height - 1};
     }
 
-    for (let i = leftTopGridPos.x; i <= rightBottom.x; i++) {
-      for (let j = leftTopGridPos.y; j <= rightBottom.y; j++) {
-        triangles.push(_.values(this.grid.getGridValue({x: i, y: j})));
-      }
-    }
-
-    return _.filter(_.flatten(triangles), (t) => t.isContainedIn(rect));
+    const cells = this.grid.getInBetween(leftTopGridPos, rightBottomGridPos);
+    const triangles = flatten(cells.map(c => Object.values(c)));
+    // return triangles.filter((t) => t.isContainedIn(rect));
+    return triangles.filter((t) => t.isIntersectingWith(rect));
   }
+
   eraseAllTriangles() {
-    const triangles = this.getAllFilledTriangles();
+    const triangles = this.filledTriangles;
     const historyActions = [];
 
-    _.each(triangles, (t) => {
-      const prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+    triangles.forEach((t) => {
+      const prevColor = t.fill;
       if (prevColor !== null) {
         historyActions.push(new FillTriangle(t, prevColor, null));
       }
@@ -184,18 +180,29 @@ class Editor {
       this.history.addAction(historyActions);
     }
   }
-  fillInRectangle(rect, color) {
+
+  fillInRectangle(rect, color, alpha) {
     const triangles = this.getAllTrianglesInRectangle(rect);
     const historyActions = [];
+    const fills = [];
 
-    _.each(triangles, (t) => {
-      const prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+    triangles.forEach((t) => {
+      const prevColor = t.fill;
+      const prevAlpha = t.alpha;
+
       if (prevColor !== color) {
         historyActions.push(new FillTriangle(t, prevColor, color));
       }
 
-      t.fill(color);
+      t.fill = color;
+      t.alpha = alpha;
+
+      if (prevColor === null) {
+        fills.push(t);
+      }
     });
+
+    this.filledTriangles = [...this.filledTriangles, ...fills];
 
     if (historyActions.length > 0) {
       this.history.addAction(historyActions);
@@ -204,14 +211,19 @@ class Editor {
   eraseInRectangle(rect) {
     const triangles = this.getAllTrianglesInRectangle(rect);
     const historyActions = [];
+    const toRemove = new Set();
 
-    _.each(triangles, (t) => {
-      const prevColor = t.shape ? t.shape.fillColor.toCSS(true) : null;
+    triangles.forEach((t) => {
+      const prevColor = t.fill;
       if (prevColor !== null) {
         historyActions.push(new FillTriangle(t, prevColor, null));
       }
+
       t.erase();
+      toRemove.add(t);
     });
+
+    this.filledTriangles = this.filledTriangles.filter(t => !toRemove.has(t));
 
     if (historyActions.length > 0) {
       this.history.addAction(historyActions);
@@ -224,8 +236,8 @@ class Editor {
       return;
     }
 
-    if (_.isArray(action)) {
-      _.each(action, (a) => a.undo());
+    if (Array.isArray(action)) {
+      action.forEach((a) => a.undo());
     } else {
       action.undo();
     }
@@ -237,34 +249,25 @@ class Editor {
       return;
     }
 
-    if (_.isArray(action)) {
-      _.each(action, (a) => a.redo());
+    if (Array.isArray(action)) {
+      action.forEach((a) => a.redo());
     } else {
       action.redo();
     }
   }
+
   hideGrid() {
-    this.gridLines.visible = false;
-    Paper.view.draw();
+    this.renderer.setGridVisible(false);
   }
+
   showGrid() {
-    this.gridLines.visible = true;
-    Paper.view.draw();
+    this.renderer.setGridVisible(true);
   }
-  toDataUrl() {
-    const gridLinesVisible = this.gridLines.visible;
-    if (gridLinesVisible) {
-      this.hideGrid();
-    }
 
-    const res = this.element.toDataURL();
-
-    if (gridLinesVisible) {
-      this.showGrid();
-    }
-
-    return res;
+  toDataURL() {
+    return this.renderer.toDataURL();
   }
+
   toSVG() {
     const gridLinesVisible = this.gridLines.visible;
     if (gridLinesVisible) {

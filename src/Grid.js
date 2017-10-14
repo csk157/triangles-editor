@@ -1,9 +1,11 @@
+import flatten from 'array-flatten';
+
 class Grid {
   constructor({width, height}, unitSize) {
     this.width = width;
     this.height = height;
     this.unitSize = unitSize;
-    this.values = {};
+    this.values = [];
   }
 
   iterateCells(fn) {
@@ -54,15 +56,19 @@ class Grid {
       return;
     }
 
-    this.values[`${coordinates.x}-${coordinates.y}`] = value;
+    const xValue = this.values[coordinates.x] || [];
+    xValue[coordinates.y] = value;
+
+    this.values[coordinates.x] = xValue;
+    // this.values[`${coordinates.x}-${coordinates.y}`] = value;
   }
 
   getGridValue(coordinates) {
-    if (this.isPositionOutside(coordinates)) {
+    if (this.isPositionOutside(coordinates) || this.values[coordinates.x] === undefined) {
       return null;
     }
 
-    const res = this.values[`${coordinates.x}-${coordinates.y}`];
+    const res = this.values[coordinates.x][coordinates.y];
     return res !== undefined ? res : null;
   }
 
@@ -77,6 +83,13 @@ class Grid {
       width: this.unitSize,
       height: this.unitSize,
     };
+  }
+
+  getInBetween(topLeft, bottomRight) {
+    const rows = this.values.slice(topLeft.x, bottomRight.x + 1);
+    const values = rows.map(r => r.slice(topLeft.y, bottomRight.y + 1));
+
+    return flatten(values);
   }
 
   getLines() {

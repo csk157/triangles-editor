@@ -10,7 +10,7 @@ class FillTriangle extends HistoryAction {
   undo() {
     super.undo();
     if (this.previousColor) {
-      this.triangle.fill(this.previousColor);
+      this.triangle.fill = this.previousColor;
     } else {
       this.triangle.erase();
     }
@@ -18,7 +18,7 @@ class FillTriangle extends HistoryAction {
   redo() {
     super.redo();
     if (this.nextColor) {
-      this.triangle.fill(this.nextColor);
+      this.triangle.fill = this.nextColor;
     } else {
       this.triangle.erase();
     }
