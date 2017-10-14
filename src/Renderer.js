@@ -74,7 +74,7 @@ export default class Renderer {
       this.drawing.drawPolygon([
         t.points[0].x, t.points[0].y,
         t.points[1].x, t.points[1].y,
-        t.points[2].x, t.points[2].y,
+        t.points[2].x, t.points[2].y
       ]);
       this.drawing.endFill();
     });
