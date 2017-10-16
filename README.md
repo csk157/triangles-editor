@@ -1,5 +1,5 @@
-Triangle editor
-===============
+# Triangle editor [![Build Status](https://travis-ci.org/csk157/triangles-editor.svg?branch=master)](https://travis-ci.org/csk157/triangles-editor)
+
 
 Library, which allows you to setup canvas and draw on it using triangles. I suppose it might be used to create geometric logos
 
@@ -33,5 +33,4 @@ A very basic example in `example/index.html`
 
 ## TODO
 - More complete example
-- Remove unused dependencies from `package.json`
 - Docs?
