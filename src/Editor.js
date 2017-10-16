@@ -1,8 +1,9 @@
-import flatten from 'array-flatten';
-import Grid from './Grid';
-import Triangle from './Triangle';
-import History from './History';
-import { FillTriangle, ChangeBackgroundColor } from './history_actions';
+import flatten from "array-flatten";
+import Grid from "./Grid";
+import Triangle from "./Triangle";
+import History from "./History";
+import { FillTriangle, ChangeBackgroundColor } from "./history_actions";
+import SvgBuilder from "./SvgBuilder";
 
 class Editor {
   constructor({ unitSize, renderer, width, height }) {
@@ -13,10 +14,13 @@ class Editor {
     this.filledTriangles = [];
 
     this.isGridVisible = true;
-    this.grid = new Grid({
-      width: this.width,
-      height: this.height,
-    }, unitSize);
+    this.grid = new Grid(
+      {
+        width: this.width,
+        height: this.height
+      },
+      unitSize
+    );
     this.history = new History();
     this.renderer = renderer;
     this.renderer.setupGridLines(this.grid.getLines());
@@ -27,17 +31,17 @@ class Editor {
     const loop = () => {
       this.renderer.render(this.filledTriangles);
       window.requestAnimationFrame(loop);
-    }
+    };
 
     loop();
   }
 
   createTrianglesFromRect(rect) {
-    const center = {x: rect.x + (rect.width / 2), y: rect.y + (rect.height / 2)};
-    const topLeft = {x: rect.x, y: rect.y};
-    const bottomLeft = {x: rect.x, y: rect.y + rect.height};
-    const topRight = {x: rect.x + rect.width, y: rect.y};
-    const bottomRight = {x: rect.x + rect.width, y: rect.y + rect.height};
+    const center = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    const topLeft = { x: rect.x, y: rect.y };
+    const bottomLeft = { x: rect.x, y: rect.y + rect.height };
+    const topRight = { x: rect.x + rect.width, y: rect.y };
+    const bottomRight = { x: rect.x + rect.width, y: rect.y + rect.height };
 
     const leftTriangle = new Triangle(topLeft, center, bottomLeft);
     const topTriangle = new Triangle(topLeft, center, topRight);
@@ -48,12 +52,12 @@ class Editor {
       left: leftTriangle,
       right: rightTriangle,
       top: topTriangle,
-      bottom: bottomTriangle,
+      bottom: bottomTriangle
     };
   }
 
   createTriangles() {
-    this.grid.iterateCells((pos) => {
+    this.grid.iterateCells(pos => {
       const rect = this.grid.getCellRealRectangle(pos);
       const triangles = this.createTrianglesFromRect(rect);
       this.grid.setGridValue(pos, triangles);
@@ -65,7 +69,7 @@ class Editor {
     const gridValue = this.grid.getGridValue(gridPosition);
     const triangles = Object.values(gridValue);
 
-    return triangles.find((triangle) => triangle.isPointInside(pos));
+    return triangles.find(triangle => triangle.isPointInside(pos));
   }
 
   fillTriangleAt(pos, color, alpha) {
@@ -103,7 +107,7 @@ class Editor {
   }
 
   setBackgroundColor(color, alpha = 1) {
-    if (color === 'transparent' || color === null) {
+    if (color === "transparent" || color === null) {
       const prevColor = this.background;
 
       if (prevColor !== color) {
@@ -129,7 +133,7 @@ class Editor {
 
   getAllTriangles() {
     let triangles = [];
-    this.grid.iterateCells((pos) => {
+    this.grid.iterateCells(pos => {
       const vals = Object.values(this.grid.getGridValue(pos, triangles));
       triangles = [...triangles, ...vals];
     });
@@ -142,32 +146,31 @@ class Editor {
   }
 
   getAllTrianglesInRectangle(rect) {
-    const leftTop = {x: rect.x, y: rect.y};
-    const rightBottom = {x: rect.x + rect.width, y: rect.y + rect.height};
+    const leftTop = { x: rect.x, y: rect.y };
+    const rightBottom = { x: rect.x + rect.width, y: rect.y + rect.height };
 
     let leftTopGridPos = this.grid.getGridPosition(leftTop);
     let rightBottomGridPos = this.grid.getGridPosition(rightBottom);
 
-
     if (!leftTopGridPos) {
-      leftTopGridPos = {x: 0, y: 0};
+      leftTopGridPos = { x: 0, y: 0 };
     }
 
     if (!rightBottomGridPos) {
-      rightBottomGridPos = {x: this.grid.width - 1, y: this.grid.height - 1};
+      rightBottomGridPos = { x: this.grid.width - 1, y: this.grid.height - 1 };
     }
 
     const cells = this.grid.getInBetween(leftTopGridPos, rightBottomGridPos);
     const triangles = flatten(cells.map(c => Object.values(c)));
     // return triangles.filter((t) => t.isContainedIn(rect));
-    return triangles.filter((t) => t.isIntersectingWith(rect));
+    return triangles.filter(t => t.isIntersectingWith(rect));
   }
 
   eraseAllTriangles() {
     const triangles = this.filledTriangles;
     const historyActions = [];
 
-    triangles.forEach((t) => {
+    triangles.forEach(t => {
       const prevColor = t.fill;
       if (prevColor !== null) {
         historyActions.push(new FillTriangle(t, prevColor, null));
@@ -186,7 +189,7 @@ class Editor {
     const historyActions = [];
     const fills = [];
 
-    triangles.forEach((t) => {
+    triangles.forEach(t => {
       const prevColor = t.fill;
       const prevAlpha = t.alpha;
 
@@ -213,7 +216,7 @@ class Editor {
     const historyActions = [];
     const toRemove = new Set();
 
-    triangles.forEach((t) => {
+    triangles.forEach(t => {
       const prevColor = t.fill;
       if (prevColor !== null) {
         historyActions.push(new FillTriangle(t, prevColor, null));
@@ -237,7 +240,7 @@ class Editor {
     }
 
     if (Array.isArray(action)) {
-      action.forEach((a) => a.undo());
+      action.forEach(a => a.undo());
     } else {
       action.undo();
     }
@@ -250,7 +253,7 @@ class Editor {
     }
 
     if (Array.isArray(action)) {
-      action.forEach((a) => a.redo());
+      action.forEach(a => a.redo());
     } else {
       action.redo();
     }
@@ -269,18 +272,14 @@ class Editor {
   }
 
   toSVG() {
-    const gridLinesVisible = this.gridLines.visible;
-    if (gridLinesVisible) {
-      this.hideGrid();
-    }
-
-    const res = this.canvas.project.exportSVG({asString: true});
-
-    if (gridLinesVisible) {
-      this.showGrid();
-    }
-
-    return res;
+    return SvgBuilder({
+      triangles: this.filledTriangles,
+      bgColor: this.background,
+      size: {
+        width: this.width * this.unitSize,
+        height: this.height * this.unitSize
+      }
+    });
   }
 }
 

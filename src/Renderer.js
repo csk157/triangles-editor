@@ -1,17 +1,16 @@
-import { Graphics, Container } from 'pixi.js';
+import { Graphics, Container } from "pixi.js";
 
 export default class Renderer {
   constructor(elem, { backgroundColor }) {
     this.element = elem;
-    this.renderer = PIXI.autoDetectRenderer(
-      {
-        width: elem.clientWidth,
-        height: elem.clientHeight,
-        view: elem,
-        transparent: true
-      });
+    this.renderer = PIXI.autoDetectRenderer({
+      width: elem.clientWidth,
+      height: elem.clientHeight,
+      view: elem,
+      transparent: true
+    });
     this.stage = new Container();
-    this.background = this.createBackground(backgroundColor || 0xEFEFEF);
+    this.background = this.createBackground(backgroundColor || 0xefefef);
     this.gridLines = null;
     this.drawing = new Graphics();
 
@@ -50,7 +49,7 @@ export default class Renderer {
     const gridLines = new Graphics();
     gridLines.lineStyle(1, 0x666666, 1);
 
-    lines.forEach(({from, to}) => {
+    lines.forEach(({ from, to }) => {
       gridLines.moveTo(from.x, from.y);
       gridLines.lineTo(to.x, to.y);
     });
@@ -72,9 +71,12 @@ export default class Renderer {
     triangles.forEach(t => {
       this.drawing.beginFill(t.fill, t.alpha);
       this.drawing.drawPolygon([
-        t.points[0].x, t.points[0].y,
-        t.points[1].x, t.points[1].y,
-        t.points[2].x, t.points[2].y
+        t.points[0].x,
+        t.points[0].y,
+        t.points[1].x,
+        t.points[1].y,
+        t.points[2].x,
+        t.points[2].y
       ]);
       this.drawing.endFill();
     });

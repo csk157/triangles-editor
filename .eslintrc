@@ -1,3 +1,8 @@
 {
-  "extends": "airbnb-base/legacy",
+  "plugins": [
+    "prettier"
+  ],
+  "rules": {
+    "prettier/prettier": "error"
+  }
 }

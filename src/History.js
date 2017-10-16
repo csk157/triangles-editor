@@ -19,14 +19,16 @@ class History {
     return res;
   }
   redo() {
-    if (this.actions.length === 0 || this.currentIndex + 1 >= this.actions.length) {
+    if (
+      this.actions.length === 0 ||
+      this.currentIndex + 1 >= this.actions.length
+    ) {
       return null;
     }
 
     this.currentIndex++;
     return this.actions[this.currentIndex];
   }
-
 }
 
 export default History;

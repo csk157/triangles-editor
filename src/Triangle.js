@@ -6,7 +6,9 @@ class Triangle {
   }
 
   static area(p1, p2, p3) {
-    return Math.abs((p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y)) / 2.0);
+    return Math.abs(
+      (p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y)) / 2.0
+    );
   }
 
   get fill() {
@@ -35,7 +37,7 @@ class Triangle {
     const a3 = Triangle.area(pA, pB, p);
 
     // Check if sum of A1, A2 and A3 is same as A
-    return (a === a1 + a2 + a3);
+    return a === a1 + a2 + a3;
   }
 
   erase() {
@@ -45,7 +47,15 @@ class Triangle {
 
   isContainedIn(rect) {
     return this.points.reduce((memo, p) => {
-      return memo && !(p.x < rect.x || p.y < rect.y || p.x > rect.x + rect.width || p.y > rect.y + rect.height);
+      return (
+        memo &&
+        !(
+          p.x < rect.x ||
+          p.y < rect.y ||
+          p.x > rect.x + rect.width ||
+          p.y > rect.y + rect.height
+        )
+      );
     }, true);
   }
 
@@ -55,11 +65,22 @@ class Triangle {
     const bottomLeft = { x: rect.x, y: rect.y + rect.height };
     const bottomRight = { x: rect.x + rect.width, y: rect.y + rect.height };
 
-    const pointInsideRect = this.points.some((p) => {
-      return p.x >= topLeft.x && p.x <= bottomRight.x && p.y >= topLeft.y && p.y <= bottomRight.y;
+    const pointInsideRect = this.points.some(p => {
+      return (
+        p.x >= topLeft.x &&
+        p.x <= bottomRight.x &&
+        p.y >= topLeft.y &&
+        p.y <= bottomRight.y
+      );
     });
 
-    return pointInsideRect || this.isPointInside(topLeft) || this.isPointInside(topRight) || this.isPointInside(bottomLeft) || this.isPointInside(bottomRight);
+    return (
+      pointInsideRect ||
+      this.isPointInside(topLeft) ||
+      this.isPointInside(topRight) ||
+      this.isPointInside(bottomLeft) ||
+      this.isPointInside(bottomRight)
+    );
   }
 }
 

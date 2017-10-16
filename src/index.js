@@ -1,5 +1,5 @@
-import Renderer from './Renderer.js';
-import Editor from './Editor.js';
+import Renderer from "./Renderer.js";
+import Editor from "./Editor.js";
 
 export default Editor;
 
